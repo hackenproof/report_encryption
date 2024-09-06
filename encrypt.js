@@ -2,12 +2,12 @@
 async function encryptFileData(data, multiPublicKeys) {
   const publicKeysArray = [];
 
-  // Gracefully handle invalid public keys
+  // Collect valid public keys and log errors for invalid ones
   for (const key of multiPublicKeys) {
     try {
       const { keys } = await openpgp.key.readArmored(key);
       if (keys && keys.length > 0) {
-        publicKeysArray.push(keys[0]);
+        publicKeysArray.push(keys[0]);  // Add valid keys
       } else {
         console.error("Invalid PGP public key detected:", key);
       }
@@ -16,7 +16,9 @@ async function encryptFileData(data, multiPublicKeys) {
     }
   }
 
+  // Check if we have any valid public keys to proceed with encryption
   if (publicKeysArray.length === 0) {
+    console.error("No valid public keys available for encryption.");
     throw new Error("No valid public keys available for encryption.");
   }
 
@@ -32,15 +34,17 @@ async function encryptFileData(data, multiPublicKeys) {
   }
 }
 
-//encrypt text fields create Report
+
+// encrypt text fields create report
 async function encryptReport(multiPublicKeys, simples) {
   const publicKeysArray = [];
 
+  // Collect valid public keys and log errors for invalid ones
   for (const key of multiPublicKeys) {
     try {
       const { keys } = await openpgp.key.readArmored(key);
       if (keys && keys.length > 0) {
-        publicKeysArray.push(keys[0]);
+        publicKeysArray.push(keys[0]);  // Add valid keys
       } else {
         console.error("Invalid PGP public key detected:", key);
       }
@@ -49,10 +53,13 @@ async function encryptReport(multiPublicKeys, simples) {
     }
   }
 
+  // Check if we have valid public keys to proceed with encryption
   if (publicKeysArray.length === 0) {
+    console.error("No valid public keys available for encryption.");
     throw new Error("No valid public keys available for encryption.");
   }
 
+  // Encrypt markdown content
   for (const e of simples) {
     const markdownValue = e.codemirror.getValue();
     if (markdownValue !== '' && !isEncrypted(markdownValue)) {
@@ -61,7 +68,7 @@ async function encryptReport(multiPublicKeys, simples) {
           message: openpgp.message.fromText(markdownValue),
           publicKeys: publicKeysArray,
         });
-        e.value(encryptedData);
+        e.value(encryptedData);  // Set the encrypted value
       } catch (error) {
         console.error('Error encrypting:', error);
       }
