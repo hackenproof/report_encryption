@@ -147,7 +147,7 @@ async function decryptMessage(encryptedMessage, privateKeyArmored, privateKeyPas
 
     return decryptedMessage;
   } catch (error) {
-    throw new Error('Decryption error:', error.message);
+    throw new Error('Decryption error:' + error.message);
   }
 }
 // decrypt MD report 
@@ -169,6 +169,6 @@ async function decryptTextContents(textContents, privateKeyArmored, privateKeyPa
 
     return decryptedMessagesArray;
   } catch (error) {
-    throw new Error('Decryption error:', error.message);
+    throw new Error('Decryption error:' + error.message);
   }
 }
