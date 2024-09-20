@@ -34,6 +34,37 @@ async function encryptFileData(data, multiPublicKeys) {
   }
 }
 
+/**
+ * Ecnrypting file
+ * @param {object} fileData Uint8Array file data
+ * @param {string} publicKeyArmored public pgp key
+ * @return {string} encrypted file representation 
+ */
+
+async function encryptFile(fileData, publicKeyArmored) {
+  if(!fileData) {
+    throw new Error('Encryption error: No file provided');
+  }
+
+  if(!publicKeyArmored?.length) {
+    throw new Error('Encryption error: No public key provided');
+  }
+  try {
+  // Public key import
+  const { keys: [publicKey] } = await openpgp.key.readArmored(publicKeyArmored);
+
+  // Encrypting
+  const { data: encrypted } = await openpgp.encrypt({
+      message: await openpgp.message.fromBinary(fileData),
+      publicKeys: [publicKey]
+  });
+
+  return encrypted;
+  } catch(error) {
+    throw new Error(error.message);
+  }
+}
+
 
 // encrypt text fields create report
 async function encryptReport(multiPublicKeys, simples) {
@@ -127,17 +158,29 @@ async function encryptMessage(plainText, publicKeyArmored) {
 
     return encryptedMessage;
   } catch (error) {
-    throw new Error("Encryption failed: " + error.message);
+    throw new Error(error.message);
   }
 }
 
 // decrypt report
 async function decryptMessage(encryptedMessage, privateKeyArmored, privateKeyPassphrase) {
+  if(!encryptedMessage?.length) {
+    throw new Error('No encrypted message provided');
+  }
+
+  if(!privateKeyArmored?.length) {
+    throw new Error('No private key provided');
+  }
+
   try {
     const { keys: [privateKeyObj] } = await openpgp.key.readArmored(privateKeyArmored);
 
-    if (privateKeyPassphrase !== '') {
-      await privateKeyObj.decrypt(privateKeyPassphrase);
+    if (!privateKeyObj.isDecrypted()) {
+      try {
+        await privateKeyObj.decrypt(privateKeyPassphrase);
+      } catch (error) {
+        throw new Error('Private key password in invalid');
+      }
     }
 
     const { data: decryptedMessage } = await openpgp.decrypt({
@@ -147,7 +190,7 @@ async function decryptMessage(encryptedMessage, privateKeyArmored, privateKeyPas
 
     return decryptedMessage;
   } catch (error) {
-    throw new Error('Decryption error:' + error.message);
+    throw new Error(error.message);
   }
 }
 // decrypt MD report 
@@ -169,6 +212,6 @@ async function decryptTextContents(textContents, privateKeyArmored, privateKeyPa
 
     return decryptedMessagesArray;
   } catch (error) {
-    throw new Error('Decryption error:' + error.message);
+    throw new Error(error.message);
   }
 }
