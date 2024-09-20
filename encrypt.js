@@ -175,11 +175,15 @@ async function decryptMessage(encryptedMessage, privateKeyArmored, privateKeyPas
   try {
     const { keys: [privateKeyObj] } = await openpgp.key.readArmored(privateKeyArmored);
 
+    if(!privateKeyObj) {
+      throw new Error("Invalid private key");
+    }
+
     if (!privateKeyObj.isDecrypted()) {
       try {
         await privateKeyObj.decrypt(privateKeyPassphrase);
       } catch (error) {
-        throw new Error('Private key password in invalid');
+        throw new Error('Private key password is invalid');
       }
     }
 
