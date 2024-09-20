@@ -1,4 +1,16 @@
-// encrypt files create report
+function checkIsValid(keyObj) {
+  if (!keyObj.isPublic() && !keyObj.isPrivate()) {
+    throw new Error("Key is not valid");
+  }
+
+  const now = new Date();
+  const validUntil = keyObj.getExpirationTime();
+
+  if (validUntil && validUntil < now) {
+    throw new Error('Key is expired');
+  }
+}
+
 async function encryptFileData(data, multiPublicKeys) {
   const publicKeysArray = [];
 
@@ -177,6 +189,8 @@ async function decryptMessage(encryptedMessage, privateKeyArmored, privateKeyPas
 
     if(!privateKeyObj) {
       throw new Error("Invalid private key");
+    } else {
+      checkIsValid(privateKeyObj);
     }
 
     if (!privateKeyObj.isDecrypted()) {
