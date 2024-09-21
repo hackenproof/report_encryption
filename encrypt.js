@@ -156,11 +156,21 @@ async function encryptData(data, publicKey) {
 
 // Encrypt share report
 async function encryptMessage(plainText, publicKeyArmored) {
+  if(!plainText?.length) {
+    throw new Error('No text provided');
+  }
+
+  if(!publicKeyArmored?.length) {
+    throw new Error('No public key provided');
+  }
+
   try {
     const { keys: [publicKey] } = await openpgp.key.readArmored(publicKeyArmored);
 
-    if (!publicKey) {
+    if(!publicKey) {
       throw new Error("Invalid public key");
+    } else {
+      checkIsValid(publicKey);
     }
 
     const { data: encryptedMessage } = await openpgp.encrypt({
