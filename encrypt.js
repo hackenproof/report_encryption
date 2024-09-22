@@ -223,11 +223,29 @@ async function decryptMessage(encryptedMessage, privateKeyArmored, privateKeyPas
 }
 // decrypt MD report 
 async function decryptTextContents(textContents, privateKeyArmored, privateKeyPassphrase) {
+  if(!textContents?.length) {
+    throw new Error('No encrypted messages provided');
+  }
+
+  if(!privateKeyArmored?.length) {
+    throw new Error('No private key provided');
+  }
+
   try {
     const { keys: [privateKeyObj] } = await openpgp.key.readArmored(privateKeyArmored);
 
-    if (privateKeyPassphrase !== '') {
-      await privateKeyObj.decrypt(privateKeyPassphrase);
+    if(!privateKeyObj) {
+      throw new Error("Invalid private key");
+    } else {
+      checkIsValid(privateKeyObj);
+    }
+
+    if (!privateKeyObj.isDecrypted()) {
+      try {
+        await privateKeyObj.decrypt(privateKeyPassphrase);
+      } catch (error) {
+        throw new Error('Private key password is invalid');
+      }
     }
 
     const decryptedMessagesArray = await Promise.all(textContents.map(async (encryptedMessage) => {
