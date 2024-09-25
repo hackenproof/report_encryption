@@ -11,6 +11,22 @@ function checkIsValid(keyObj) {
   }
 }
 
+function isPublic(keyObj){
+  checkIsValid(keyObj);
+
+  if (!keyObj.isPublic()){
+    throw new Error("Key is not public");
+  }
+}
+
+function isPrivate(keyObj){
+  checkIsValid(keyObj);
+
+  if (!keyObj.isPrivate()){
+    throw new Error("Key is not private");
+  }
+}
+
 async function encryptFileData(data, multiPublicKeys) {
   const publicKeysArray = [];
 
@@ -170,7 +186,7 @@ async function encryptMessage(plainText, publicKeyArmored) {
     if(!publicKey) {
       throw new Error("Invalid public key");
     } else {
-      checkIsValid(publicKey);
+      isPublic(publicKey);
     }
 
     const { data: encryptedMessage } = await openpgp.encrypt({
@@ -200,7 +216,7 @@ async function decryptMessage(encryptedMessage, privateKeyArmored, privateKeyPas
     if(!privateKeyObj) {
       throw new Error("Invalid private key");
     } else {
-      checkIsValid(privateKeyObj);
+      isPrivate(privateKeyObj);
     }
 
     if (!privateKeyObj.isDecrypted()) {
@@ -237,7 +253,7 @@ async function decryptTextContents(textContents, privateKeyArmored, privateKeyPa
     if(!privateKeyObj) {
       throw new Error("Invalid private key");
     } else {
-      checkIsValid(privateKeyObj);
+      isPrivate(privateKeyObj);
     }
 
     if (!privateKeyObj.isDecrypted()) {
