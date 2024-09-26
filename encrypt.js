@@ -1,4 +1,32 @@
-// encrypt files create report
+function checkIsValid(keyObj) {
+  if (!keyObj.isPublic() && !keyObj.isPrivate()) {
+    throw new Error("Key is not valid");
+  }
+
+  const now = new Date();
+  const validUntil = keyObj.getExpirationTime();
+
+  if (validUntil && validUntil < now) {
+    throw new Error('Key is expired');
+  }
+}
+
+function isPublic(keyObj){
+  checkIsValid(keyObj);
+
+  if (!keyObj.isPublic()){
+    throw new Error("Key is not public");
+  }
+}
+
+function isPrivate(keyObj){
+  checkIsValid(keyObj);
+
+  if (!keyObj.isPrivate()){
+    throw new Error("Key is not private");
+  }
+}
+
 async function encryptFileData(data, multiPublicKeys) {
   const publicKeysArray = [];
 
@@ -31,6 +59,37 @@ async function encryptFileData(data, multiPublicKeys) {
   } catch (error) {
     console.error('Encryption error:', error);
     throw error;
+  }
+}
+
+/**
+ * Ecnrypting file
+ * @param {object} fileData Uint8Array file data
+ * @param {string} publicKeyArmored public pgp key
+ * @return {string} encrypted file representation 
+ */
+
+async function encryptFile(fileData, publicKeyArmored) {
+  if(!fileData) {
+    throw new Error('Encryption error: No file provided');
+  }
+
+  if(!publicKeyArmored?.length) {
+    throw new Error('Encryption error: No public key provided');
+  }
+  try {
+  // Public key import
+  const { keys: [publicKey] } = await openpgp.key.readArmored(publicKeyArmored);
+
+  // Encrypting
+  const { data: encrypted } = await openpgp.encrypt({
+      message: await openpgp.message.fromBinary(fileData),
+      publicKeys: [publicKey]
+  });
+
+  return encrypted;
+  } catch(error) {
+    throw new Error(error.message);
   }
 }
 
@@ -113,11 +172,21 @@ async function encryptData(data, publicKey) {
 
 // Encrypt share report
 async function encryptMessage(plainText, publicKeyArmored) {
+  if(!plainText?.length) {
+    throw new Error('No text provided');
+  }
+
+  if(!publicKeyArmored?.length) {
+    throw new Error('No public key provided');
+  }
+
   try {
     const { keys: [publicKey] } = await openpgp.key.readArmored(publicKeyArmored);
 
-    if (!publicKey) {
+    if(!publicKey) {
       throw new Error("Invalid public key");
+    } else {
+      isPublic(publicKey);
     }
 
     const { data: encryptedMessage } = await openpgp.encrypt({
@@ -127,17 +196,35 @@ async function encryptMessage(plainText, publicKeyArmored) {
 
     return encryptedMessage;
   } catch (error) {
-    throw new Error("Encryption failed: " + error.message);
+    throw new Error(error.message);
   }
 }
 
 // decrypt report
 async function decryptMessage(encryptedMessage, privateKeyArmored, privateKeyPassphrase) {
+  if(!encryptedMessage?.length) {
+    throw new Error('No encrypted message provided');
+  }
+
+  if(!privateKeyArmored?.length) {
+    throw new Error('No private key provided');
+  }
+
   try {
     const { keys: [privateKeyObj] } = await openpgp.key.readArmored(privateKeyArmored);
 
-    if (privateKeyPassphrase !== '') {
-      await privateKeyObj.decrypt(privateKeyPassphrase);
+    if(!privateKeyObj) {
+      throw new Error("Invalid private key");
+    } else {
+      isPrivate(privateKeyObj);
+    }
+
+    if (!privateKeyObj.isDecrypted()) {
+      try {
+        await privateKeyObj.decrypt(privateKeyPassphrase);
+      } catch (error) {
+        throw new Error('Private key password is invalid');
+      }
     }
 
     const { data: decryptedMessage } = await openpgp.decrypt({
@@ -147,16 +234,34 @@ async function decryptMessage(encryptedMessage, privateKeyArmored, privateKeyPas
 
     return decryptedMessage;
   } catch (error) {
-    throw new Error('Decryption error:', error.message);
+    throw new Error(error.message);
   }
 }
 // decrypt MD report 
 async function decryptTextContents(textContents, privateKeyArmored, privateKeyPassphrase) {
+  if(!textContents?.length) {
+    throw new Error('No encrypted messages provided');
+  }
+
+  if(!privateKeyArmored?.length) {
+    throw new Error('No private key provided');
+  }
+
   try {
     const { keys: [privateKeyObj] } = await openpgp.key.readArmored(privateKeyArmored);
 
-    if (privateKeyPassphrase !== '') {
-      await privateKeyObj.decrypt(privateKeyPassphrase);
+    if(!privateKeyObj) {
+      throw new Error("Invalid private key");
+    } else {
+      isPrivate(privateKeyObj);
+    }
+
+    if (!privateKeyObj.isDecrypted()) {
+      try {
+        await privateKeyObj.decrypt(privateKeyPassphrase);
+      } catch (error) {
+        throw new Error('Private key password is invalid');
+      }
     }
 
     const decryptedMessagesArray = await Promise.all(textContents.map(async (encryptedMessage) => {
@@ -169,6 +274,6 @@ async function decryptTextContents(textContents, privateKeyArmored, privateKeyPa
 
     return decryptedMessagesArray;
   } catch (error) {
-    throw new Error('Decryption error:', error.message);
+    throw new Error(error.message);
   }
 }
