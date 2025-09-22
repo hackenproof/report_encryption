@@ -28,6 +28,37 @@ async function encryptFileData(data, multiPublicKeys) {
   }
 }
 
+// encrypt binary file for multiple recipients
+async function encryptFileMulti(fileData, multiPublicKeys) {
+  try {
+    if (!fileData) {
+      throw new Error("Encryption error: No file provided");
+    }
+    if (!Array.isArray(multiPublicKeys) || multiPublicKeys.length === 0) {
+      throw new Error("Encryption error: No public keys provided");
+    }
+    const publicKeysArray = [];
+    for (const key of multiPublicKeys) {
+      try {
+        const { keys } = await openpgp.key.readArmored(key);
+        if (keys && keys[0]) {
+          publicKeysArray.push(keys[0]);
+        }
+      } catch (innerError) {}
+    }
+    if (publicKeysArray.length === 0) {
+      throw new Error("No valid public keys available for encryption.");
+    }
+    const { data: encrypted } = await openpgp.encrypt({
+      message: await openpgp.message.fromBinary(fileData),
+      publicKeys: publicKeysArray,
+    });
+    return encrypted;
+  } catch (error) {
+    throw new Error(error.message);
+  }
+}
+
 // encrypt text fields create report
 async function encryptReport(multiPublicKeys, simples) {
   const publicKeysArray = [];
